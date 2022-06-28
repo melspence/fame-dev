@@ -1,15 +1,20 @@
-# Docker for local web development, part 2: put your images on a diet
+# Forrondo Artist Management Excellence Inc
 
-This repository accompanies a [tutorial series](https://tech.osteel.me/posts/docker-for-local-web-development-why-should-you-care "Docker for local web development, introduction: why should you care?") about leveraging Docker for local web development.
+This project implements the case study used in my Database Design course. In fully implementing the case study, I aim to bring together my learnings from Database Design, UX Design, frontend evelopment, backend development and Dev Ops.
 
-The current branch covers part 2 of the series, which is about reducing the size of the images. Please refer to the [full article](https://tech.osteel.me/posts/docker-for-local-web-development-part-2-put-your-images-on-a-diet "Docker for local web development, part 2: put your images on a diet") for a detailed explanation.
+The docker development environment is based on a [tutorial series](https://tech.osteel.me/posts/docker-for-local-web-development-why-should-you-care "Docker for local web development, introduction: why should you care?") about leveraging Docker for local web development.
+
+The current branch is based on part 3 of the series, which is about managing a three-tier architecture with frameworks.
 
 ## Content
 
-This branch contains a basic LEMP stack running on Docker and orchestrated by Docker Compose, including:
+This branch contains a three-tier architecture application running on a LEMP stack, supported by Docker and orchestrated by Docker Compose.
+
+It includes
 
 * A container for Nginx;
-* A container for PHP-FPM;
+* A container for the backend application based on [Laravel](https://laravel.com/);
+*  A container for the frontend application based on [Vue.js](https://vuejs.org/);
 * A container for MySQL;
 * A container for phpMyAdmin;
 * A volume to persist MySQL data.
@@ -24,71 +29,72 @@ This setup also uses localhost's port 80, so make sure it is available.
 
 ## Directions of use
 
-Add the following domains to your machine's `hosts` file:
+Add the following domains to your machine's hosts file:
 
-```
-127.0.0.1 php.test phpmyadmin.test
-```
+127.0.0.1 backend.fame-dev.test frontend.fame-dev.test phpmyadmin.fame-dev.test
 
-Clone the repository and `checkout` the `part-2` branch:
+Clone the repository and checkout the 3-tier branch:
 
-```
-$ git clone git@github.com:osteel/docker-tutorial.git && cd docker-tutorial
-$ git checkout part-2
-```
+$ git@github.com:melspence/fame-dev.git cd fame-dev
 
-Copy `.env.example` to `.env`:
+$ git checkout 3-tier
 
-```
-$ cp .env.example .env
-```
+The rest of the commands are to be run from the root of the project.
 
-Run the following command:
+Copy .env.example to .env, both at the root of the project and in src/backend:
 
-```
+$ cp .env.example .env && cd src/backend && cp .env.example .env && cd ../..
+
+To ensure compatibility across operating systems, specify your system's current user ID in the newly created .env at the root of the project, e.g.:
+
+HOST_UID=1000
+
+You can obtain that ID by running the following command in a terminal:
+
+$ id -u
+
+The following commands may take a little bit of time, as some Docker images might need downloading.
+
+Install the backend dependencies:
+
+$ docker compose run --rm backend composer install
+
+Install the frontend dependencies:
+
+$ docker compose run --rm frontend yarn install
+
+Start the project:
+
 $ docker compose up -d
-```
 
-This may take a little bit of time, as some Docker images might need downloading.
+Once the project is started, generate the Laravel application's key:
 
-Once the script is done, visit [php.test](http://php.test).
+$ docker compose exec backend php artisan key:generate
 
-## Explanation
+You can now visit frontend.demo.test and backend.demo.test.
 
-The images used by the setup are listed and configured in [`docker-compose.yml`](https://github.com/osteel/docker-tutorial/blob/part-2/docker-compose.yml).
+Yarn, Artisan and Composer are now directly available from the running containers:
 
-When building and starting the containers based on the images for the first time, a MySQL database named `demo` is automatically created (you can pick a different name in the MySQL service's description in `docker-compose.yml`).
+$ docker compose exec frontend yarn
+$ docker compose exec backend php artisan
+$ docker compose exec backend composer
 
-Minimalist Nginx configurations for the [PHP application](https://github.com/osteel/docker-tutorial/blob/part-2/.docker/nginx/conf.d/php.conf) and [phpMyAdmin](https://github.com/osteel/docker-tutorial/blob/part-2/.docker/nginx/conf.d/phpmyadmin.conf) are also copied over to Nginx's container, making them available at [php.test](http://php.test) and [phpmyadmin.test](http://phpmyadmin.test) respectively (the database credentials are *root* / *root*).
+For example, you could run Laravel's default database migrations to confirm the MySQL connection is working:
 
-The `src/` directory containing the application is mounted onto both Nginx's and the application's containers, meaning any update to the code is immediately available upon refreshing the page, without having to rebuild any container.
+$ docker compose exec backend php artisan migrate
 
-The database data is persisted in its own local directory through the volume `mysqldata`, which is mounted onto MySQL's container.
+Explanation
 
-Please refer to the [full article](https://tech.osteel.me/posts/docker-for-local-web-development-part-2-put-your-images-on-a-diet "Docker for local web development, part 2: put your images on a diet") for a detailed explanation.
+The images used by the setup are listed and configured in docker-compose.yml.
 
-## Cleaning up
+When building and starting the containers based on the images for the first time, a MySQL database named demo is automatically created (you can pick a different name in the MySQL service's description in docker-compose.yml).
 
-To stop the containers:
+Minimalist Nginx configurations for the backend application, the frontend application and phpMyAdmin are also copied over to Nginx's container, making them available at backend.fame-dev.test, frontend.fame-dev.test and phpmyadmin.fame-dev.test respectively (the database credentials are root / root).
 
-```
-$ docker compose stop
-```
+The directories containing the backend and frontend applications are mounted onto both Nginx's and the applications' containers, meaning any update to the code is immediately available upon refreshing the page, without having to rebuild any container.
 
-To destroy the containers:
+Moreover, the Vue.js development server is automatically started, meaning you can update the code and benefit from hot-reload straight away.
 
-```
-$ docker compose down
-```
+The frontend application is consuming a simple endpoint from the backend application to fetch and display the text below the animated gif.
 
-To destroy the containers and the associated volumes:
-
-```
-$ docker compose down -v
-```
-
-To remove everything, including images and orphan containers:
-
-```
-$ docker compose down -v --rmi all --remove-orphans
-```
+Finally, the database data is persisted in its own local directory through the volume mysqldata, which is mounted onto MySQL's container.
