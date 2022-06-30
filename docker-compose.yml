@@ -15,6 +15,7 @@ services:
     depends_on:
       - backend
       - phpmyadmin
+      - frontend
 
   # Backend Service
   backend:
@@ -28,6 +29,15 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+ # Frontend Service
+  frontend:
+    build: ./src/frontend
+    working_dir: /var/www/frontend
+    volumes:
+      - ./src/frontend:/var/www/frontend
+    depends_on:
+      - backend
 
   # MySQL Service
   mysql:
